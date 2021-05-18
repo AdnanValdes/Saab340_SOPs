@@ -1,8 +1,9 @@
 from sys import exit
 from textwrap import dedent
 import random
+import os
 import re
-
+import itertools
 
 
 class Scenario:
@@ -19,7 +20,7 @@ class Scenario:
 
     vital = {'actions': None}
 
-    script = {'engineFailures': ['check_power', 'baseFailure', 'negAutocoarsen']}
+    script = {'engineFailures': ['check_power', 'posAutocoarsen', 'negAutocoarsen']}
 
     def __init__(self):
         self.completed = False
@@ -107,6 +108,11 @@ class EngineFailureAfterV1(Scenario):
 
     def start(self):
 
+        print (f"You are the {Scenario.role['duties']}")
+        print(f"Failed side: {Scenario.engine['side']['failed']}")
+        print('Autocoarse' + str(Scenario.engine['autocoarsen']))
+        # Only runs beginning of engine failure SOP, up to "confirm autocoarsen".
+        # The first choice the user makes is *after* this script ends.
         with open(self.get_script('check_power'), 'r') as calls:
             line = calls.readline().rstrip()
             while line:
@@ -116,15 +122,35 @@ class EngineFailureAfterV1(Scenario):
                     print(line)
                 line = calls.readline()
 
+        # Check if user is PM; if so, check for failed side and autocoarsen status
+        if Scenario.role['duties'] == 'PM':
+            usr_input = self.actions()
+            if 'negative' in usr_input:
+                Scenario.engine['autocoarsen'] = False
+            else:
+                Scenario.engine['autocoarsen'] = True
+
+            if "left" in usr_input:
+                Scenario.engine['side']['failed'] = 'left'
+                Scenario.engine['side']['choice'] = True
+
+            elif "right" in usr_input:
+                Scenario.engine['side']['failed'] = 'right'
+                Scenario.engine['side']['choice'] = True
+
 
         if Scenario.engine['autocoarsen']:
-            script = self.get_script('baseFailure')
+            script = self.get_script('posAutocoarsen')
 
         else:
             script = self.get_script('negAutocoarsen')
 
+        print(Scenario.engine['autocoarsen'])
         with open(script, "r") as calls:
             line = calls.readline().rstrip()
+
+            if Scenario.role['duties'] == "PM":
+                line = calls.readline()
 
             while line:
                 if line[:2] == Scenario.role['duties']:
@@ -134,15 +160,15 @@ class EngineFailureAfterV1(Scenario):
                         Scenario.vital['actions'] = usr_input.split('vital')[0].strip()
                         return 'vital_actions'
 
-                    if Scenario.role['duties'] == "PM" and not Scenario.engine['autocoarsen']:
-                        if not Scenario.engine['side']['choice']:
-                            if "left" in usr_input:
-                                Scenario.engine['side']['failed'] = 'left'
-                                Scenario.engine['side']['choice'] = True
+                    #if Scenario.role['duties'] == "PM" and not Scenario.engine['autocoarsen']:
+                    #    if not Scenario.engine['side']['choice']:
+                    #        if "left" in usr_input:
+                    #            Scenario.engine['side']['failed'] = 'left'
+                    #            Scenario.engine['side']['choice'] = True
 
-                            elif "right" in usr_input:
-                                Scenario.engine['side']['failed'] = 'right'
-                                Scenario.engine['side']['choice'] = True
+                    #        elif "right" in usr_input:
+                    #            Scenario.engine['side']['failed'] = 'right'
+                    #            Scenario.engine['side']['choice'] = True
 
                 else:
                     print(line.format(self.engine['side']['failed']))
@@ -150,7 +176,7 @@ class EngineFailureAfterV1(Scenario):
                         Scenario.vital['actions'] = line.split('vital')[0].strip()
                         return "vital_actions"
 
-                line = calls.readline()
+                line = calls.readline().rstrip()
 
 class VitalActions(Scenario):
 
@@ -177,15 +203,15 @@ class VitalActions(Scenario):
                         Scenario.vital['actions'] = usr_input.split('vital')[0].strip()
                         return 'vital_actions'
 
-                    if Scenario.role['duties'] == "PM" and not Scenario.engine['autocoarsen']:
-                        if not Scenario.engine['side']['choice']:
-                            if "left" in usr_input:
-                                Scenario.engine['side']['failed'] = 'left'
-                                Scenario.engine['side']['choice'] = True
-
-                            elif "right" in usr_input:
-                                Scenario.engine['side']['failed'] = 'right'
-                                Scenario.engine['side']['choice'] = True
+                    #if Scenario.role['duties'] == "PM" and not Scenario.engine['autocoarsen']:
+                    #    if not Scenario.engine['side']['choice']:
+                    #        if "left" in usr_input:
+                    #            Scenario.engine['side']['failed'] = 'left'
+                    #            Scenario.engine['side']['choice'] = True
+#
+                    #        elif "right" in usr_input:
+                    #            Scenario.engine['side']['failed'] = 'right'
+                    #            Scenario.engine['side']['choice'] = True
 
                 else:
                     print(line.format(self.engine['side']['failed']))
@@ -231,5 +257,6 @@ class Runner:
 
 scenario_map = Map('EngineFailureAfterV1')
 sop = Runner(scenario_map)
-print (f"You are the {Scenario.role['duties']}")
+os.system('cls')
+Scenario.role['duties'] = 'PM'
 sop.begin()
