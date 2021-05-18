@@ -160,16 +160,6 @@ class EngineFailureAfterV1(Scenario):
                         Scenario.vital['actions'] = usr_input.split('vital')[0].strip()
                         return 'vital_actions'
 
-                    #if Scenario.role['duties'] == "PM" and not Scenario.engine['autocoarsen']:
-                    #    if not Scenario.engine['side']['choice']:
-                    #        if "left" in usr_input:
-                    #            Scenario.engine['side']['failed'] = 'left'
-                    #            Scenario.engine['side']['choice'] = True
-
-                    #        elif "right" in usr_input:
-                    #            Scenario.engine['side']['failed'] = 'right'
-                    #            Scenario.engine['side']['choice'] = True
-
                 else:
                     print(line.format(self.engine['side']['failed']))
                     if "vital actions" in line:
@@ -202,16 +192,6 @@ class VitalActions(Scenario):
                     if 'vital actions' in usr_input:
                         Scenario.vital['actions'] = usr_input.split('vital')[0].strip()
                         return 'vital_actions'
-
-                    #if Scenario.role['duties'] == "PM" and not Scenario.engine['autocoarsen']:
-                    #    if not Scenario.engine['side']['choice']:
-                    #        if "left" in usr_input:
-                    #            Scenario.engine['side']['failed'] = 'left'
-                    #            Scenario.engine['side']['choice'] = True
-#
-                    #        elif "right" in usr_input:
-                    #            Scenario.engine['side']['failed'] = 'right'
-                    #            Scenario.engine['side']['choice'] = True
 
                 else:
                     print(line.format(self.engine['side']['failed']))
