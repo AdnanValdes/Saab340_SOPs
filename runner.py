@@ -9,7 +9,7 @@ import itertools
 class Scenario:
     role = {
         "seat": 'fo',
-        "duties": random.choice(['PF', 'PM'])
+        "duties": 'PM' #random.choice(['PF', 'PM'])
     }
 
     engine = {
@@ -20,22 +20,47 @@ class Scenario:
 
     vital = {'actions': None}
 
-    script = {'engineFailures': ['check_power', 'posAutocoarsen', 'negAutocoarsen']}
+    script = {'engineFailures': ['check_power', 'posAutocoarsen', 'negAutocoarsen'],
+              'vitalActions': ['confirm_levers', 'engine_failure', 'engine_fire', 'engine_failure_fire']}
 
-    def __init__(self):
-        self.completed = False
+    #def __init__(self):
+    #    pass
 
     def actions(self):
         action = input('> ').lower()
 
         if action == 'quit':
             self.quit_game()
-
         else:
             return action
 
     def get_script(self,search_pattern):
+        search_pattern = search_pattern.replace(' ', '_')
         return 'scripts/' + re.sub(r'\d/.*', "", str(self.search(Scenario.script, search_pattern)[0])) + search_pattern + '.txt'
+
+    def run_lines(self, script, *args, skip_first=False):
+        with open(script, "r") as calls:
+            line = calls.readline().rstrip()
+
+            if Scenario.role['duties'] == "PM" and skip_first:
+                line = calls.readline()
+
+            while line:
+                if line[:2] == Scenario.role['duties']:
+                    usr_input = self.actions()
+
+                    if 'vital actions' in usr_input:
+                        Scenario.vital['actions'] = usr_input.split('vital')[0].split(None, 1)[1].strip()
+                        return 'vital_actions'
+
+                else:
+                    print(line.format(*args))
+                    if "vital actions" in line:
+                        Scenario.vital['actions'] = line.split('vital')[0].split(None, 2)[2].strip()
+                        return "vital_actions"
+
+                line = calls.readline().rstrip()
+
 
     def quit_game(self):
         quit_game = input('Are you sure you want to quit? Progress will not be saved [Y/n]\n> ').lower()
@@ -46,8 +71,9 @@ class Scenario:
         else:
             self.start()
 
+
     def start(self):
-        print(dedent('This program should NOT be used for SOP training, navigation, or anything airplane related. Frankly, it should not be used by anyone.'))
+        pass
 
     def search(self, d, search_pattern, prev_datapoint_path=''):
         '''
@@ -84,14 +110,13 @@ class Scenario:
         output = filter(None, output)
         return list(output)
 
+    def print_line(self, line, format):
+        pass
 
 
 class TakeOff(Scenario):
 
     scenario_name = 'takeoff'
-
-    def __init__(self):
-        super().__init__()
 
     def start(self):
         print('take off scenario!')
@@ -102,25 +127,11 @@ class EngineFailureAfterV1(Scenario):
 
     scenario_name = 'EngineFailureAfterV1'
 
-    def __init__(self):
-        super().__init__()
-
-
     def start(self):
 
-        print (f"You are the {Scenario.role['duties']}")
-        print(f"Failed side: {Scenario.engine['side']['failed']}")
-        print('Autocoarse' + str(Scenario.engine['autocoarsen']))
         # Only runs beginning of engine failure SOP, up to "confirm autocoarsen".
         # The first choice the user makes is *after* this script ends.
-        with open(self.get_script('check_power'), 'r') as calls:
-            line = calls.readline().rstrip()
-            while line:
-                if line[:2] == Scenario.role['duties']:
-                    usr_input = self.actions()
-                else:
-                    print(line)
-                line = calls.readline()
+        self.run_lines(self.get_script('check_power'))
 
         # Check if user is PM; if so, check for failed side and autocoarsen status
         if Scenario.role['duties'] == 'PM':
@@ -132,41 +143,17 @@ class EngineFailureAfterV1(Scenario):
 
             if "left" in usr_input:
                 Scenario.engine['side']['failed'] = 'left'
-                Scenario.engine['side']['choice'] = True
 
             elif "right" in usr_input:
                 Scenario.engine['side']['failed'] = 'right'
-                Scenario.engine['side']['choice'] = True
 
 
         if Scenario.engine['autocoarsen']:
-            script = self.get_script('posAutocoarsen')
-
+            return self.run_lines(self.get_script('posAutocoarsen'), Scenario.engine['side']['failed'], skip_first=True)
         else:
-            script = self.get_script('negAutocoarsen')
+            return self.run_lines(self.get_script('negAutocoarsen'), Scenario.engine['side']['failed'], skip_first=True)
 
-        print(Scenario.engine['autocoarsen'])
-        with open(script, "r") as calls:
-            line = calls.readline().rstrip()
 
-            if Scenario.role['duties'] == "PM":
-                line = calls.readline()
-
-            while line:
-                if line[:2] == Scenario.role['duties']:
-                    usr_input = self.actions()
-
-                    if 'vital actions' in usr_input:
-                        Scenario.vital['actions'] = usr_input.split('vital')[0].strip()
-                        return 'vital_actions'
-
-                else:
-                    print(line.format(self.engine['side']['failed']))
-                    if "vital actions" in line:
-                        Scenario.vital['actions'] = line.split('vital')[0].strip()
-                        return "vital_actions"
-
-                line = calls.readline().rstrip()
 
 class VitalActions(Scenario):
 
@@ -180,9 +167,12 @@ class VitalActions(Scenario):
 
     def start(self):
 
-        script = 'scripts/vitalActions/' + Scenario.vital['actions'] + ".txt"
 
-        with open(script, "r") as calls:
+        print(Scenario.vital['actions'])
+
+        self.run_lines('confirm_levers')
+
+        with open(self.get_script(Scenario.vital['actions']), "r") as calls:
             line = calls.readline().rstrip()
 
             while line:
@@ -201,6 +191,8 @@ class VitalActions(Scenario):
 
                 line = calls.readline()
 
+    def engine_vital_actions(self):
+        pass
 
 class Map:
 
@@ -238,5 +230,4 @@ class Runner:
 scenario_map = Map('EngineFailureAfterV1')
 sop = Runner(scenario_map)
 os.system('cls')
-Scenario.role['duties'] = 'PM'
 sop.begin()
