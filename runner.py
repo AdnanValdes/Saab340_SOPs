@@ -5,7 +5,7 @@ from sys import exit
 
 class Scenario:
     role = {
-        "seat": 'fo',
+        "seat": 'FO',
         "duties": random.choice(['PF', 'PM'])
     }
 
@@ -23,7 +23,8 @@ class Scenario:
 
     vital = {'actions': None}
 
-    script = {'engineFailures': ['check_power', 'posAutocoarsen', 'negAutocoarsen', 'above_1500', 'confirm_failure', 'shutdown'],
+    script = {'briefings': ['any_malfunction', 'confirm_autocoarsen'],
+              'engineFailures': ['check_power', 'posAutocoarsen', 'negAutocoarsen', 'above_1500', 'confirm_failure', 'shutdown'],
               'vitalActions': ['confirm_levers', 'engine_failure', 'engine_fire', 'engine_failure_fire', 'continued_fire']
     }
 
@@ -32,7 +33,7 @@ class Scenario:
 
         if action == 'quit':
             return self.quit_game()
-            
+
         else:
             return action
 
@@ -48,7 +49,7 @@ class Scenario:
                 line = calls.readline().rstrip()
 
             while line:
-                if line[:2] == Scenario.role['duties']:
+                if line[:2] == Scenario.role['duties'] or line[:2] == Scenario.role['seat']:
                     usr_input = self.actions()
 
                     if 'autopilot' in usr_input and Scenario.role['duties'] == 'PF':
@@ -122,6 +123,39 @@ class Scenario:
         output = filter(None, output)
         return list(output)
 
+class Briefing(Scenario):
+    scenario_name = 'briefing'
+
+    def start(self):
+        self.emergency()
+
+    def emergency(self):
+        self.run_lines('any_malfunction')
+
+        if Scenario.role['duties'] == 'PM':
+            usr_input = self.actions()
+            if 'negative' in usr_input:
+                Scenario.engine['autocoarsen'] = False
+            else:
+                Scenario.engine['autocoarsen'] = True
+
+            if "left" in usr_input:
+                Scenario.engine['side']['failed'] = 'left'
+
+            elif "right" in usr_input:
+                Scenario.engine['side']['failed'] = 'right'
+
+            self.run_lines('confirm_autocoarsen', Scenario.engine['side']['failed'], skip_first=True)
+        else:
+            self.run_lines('confirm_autocoarsen', Scenario.engine['side']['failed'])
+
+        self.run_lines('confirm_failure', Scenario.engine['side']['failed'])
+        self.run_lines('confirm_levers', Scenario.engine['side']['failed'])
+        if Scenario.role['duties'] == 'PF':
+            self.actions()
+        else:
+            print('PF: engine fire status.')
+        self.run_lines('engine_failure', Scenario.engine['side']['failed'])
 
 class TakeOff(Scenario):
 
@@ -138,10 +172,11 @@ class EngineFailure(Scenario):
 
     def start(self):
 
-        return self.shutdown()
-
         if Scenario.systems['autocoarsen']:
             return self.after_v1()
+
+        elif 'shutdown' in Scenario.vital['actions']:
+            return self.shutdown()
 
         else:
             return self.above_1500()
@@ -261,6 +296,7 @@ class VitalActions(Scenario):
 class SOP:
 
     scenarios = {
+        'Briefing':Briefing(),
         'EngineFailure' : EngineFailure(),
         'vital_actions': VitalActions(),
         'takeoff': TakeOff()
@@ -297,7 +333,7 @@ class Runner:
             print('Invalid input, re-starting')
 
 
-scenario_map = SOP('EngineFailure')
+scenario_map = SOP('Briefing')
 sop = Runner(scenario_map)
 os.system('cls')
 sop.begin()
