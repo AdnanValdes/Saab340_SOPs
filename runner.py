@@ -17,12 +17,13 @@ class Scenario:
     }
 
     systems = {'autopilot': {'yaw damp':False, 'autopilot':False},
-               'autocoarsen':True
+               'autocoarsen':True,
+               'CWP_cancelled': False
     }
 
     vital = {'actions': None}
 
-    script = {'engineFailures': ['check_power', 'posAutocoarsen', 'negAutocoarsen', 'above_1500', 'confirm_failure'],
+    script = {'engineFailures': ['check_power', 'posAutocoarsen', 'negAutocoarsen', 'above_1500', 'confirm_failure', 'shutdown'],
               'vitalActions': ['confirm_levers', 'engine_failure', 'engine_fire', 'engine_failure_fire', 'continued_fire']
     }
 
@@ -31,6 +32,7 @@ class Scenario:
 
         if action == 'quit':
             return self.quit_game()
+            
         else:
             return action
 
@@ -69,6 +71,7 @@ class Scenario:
                     if "vital actions" in line:
                         Scenario.vital['actions'] = line.split('vital')[0].split(None, 2)[2].strip()
                         return "vital_actions"
+
                 line = calls.readline().rstrip()
 
 
@@ -134,8 +137,12 @@ class EngineFailure(Scenario):
     scenario_name = 'EngineFailure'
 
     def start(self):
+
+        return self.shutdown()
+
         if Scenario.systems['autocoarsen']:
             return self.after_v1()
+
         else:
             return self.above_1500()
 
@@ -149,6 +156,7 @@ class EngineFailure(Scenario):
             usr_input = self.actions()
             if 'negative' in usr_input:
                 Scenario.engine['autocoarsen'] = False
+
             else:
                 Scenario.engine['autocoarsen'] = True
 
@@ -158,9 +166,9 @@ class EngineFailure(Scenario):
             elif "right" in usr_input:
                 Scenario.engine['side']['failed'] = 'right'
 
-
         if Scenario.engine['autocoarsen']:
             return self.run_lines('posAutocoarsen', Scenario.engine['side']['failed'], skip_first=True)
+
         else:
             return self.run_lines('negAutocoarsen', Scenario.engine['side']['failed'], skip_first=True)
 
@@ -168,17 +176,30 @@ class EngineFailure(Scenario):
         self.run_lines('above_1500')
         if Scenario.role['duties'] == 'PF':
             usr_input = self.actions()
-
             if 'left' in usr_input:
                 Scenario.engine['side']['failed'] = 'left'
+
             else:
                 Scenario.engine['side']['failed'] = 'right'
 
             return self.run_lines('confirm_failure', Scenario.engine['side']['failed'], skip_first=True)
 
         else:
-
             return self.run_lines('confirm_failure', Scenario.engine['side']['failed'])
+
+    def shutdown(self):
+        if Scenario.role['duties'] == 'PF':
+            usr_input = self.actions()
+            if 'left' in usr_input:
+                Scenario.engine['side']['failed'] = 'left'
+
+            else:
+                Scenario.engine['side']['failed'] = 'right'
+
+            return self.run_lines('shutdown', Scenario.engine['side']['failed'], skip_first=True)
+
+        else:
+            return self.run_lines('shutdown', Scenario.engine['side']['failed'])
 
 class VitalActions(Scenario):
 
@@ -188,6 +209,9 @@ class VitalActions(Scenario):
         # Add logic for calling vital actions without specifying which ones (AKA when Scenario.vital['actions'] = None)
         if 'engine failure' in Scenario.vital['actions']:
             return self.engine_vital_actions()
+
+        elif 'engine shutdown' in Scenario.vital['actions']:
+            return self.run_lines('confirm_levers', Scenario.engine['side']['failed'])
 
     def engine_vital_actions(self):
 
@@ -210,22 +234,27 @@ class VitalActions(Scenario):
                 if 'no' in usr_input:
                     Scenario.engine['fire_status'] = 'no fire'
                     self.run_lines('engine_failure', Scenario.engine['side']['failed'], Scenario.engine['fire_status'], skip_first=True)
+
                 else:
                     self.run_lines('continued_fire', Scenario.engine['side']['failed'], Scenario.engine['fire_status'], skip_first=True)
 
             else:
                 self.run_lines('engine_fire', Scenario.engine['side']['failed'], Scenario.engine['fire_status'])
                 Scenario.engine['fire_status'] = random.choice(['fire', 'no fire'])
+
                 if Scenario.engine['fire_status'] == 'fire':
                     self.run_lines('continued_fire', Scenario.engine['side']['failed'], Scenario.engine['fire_status'])
+
                 else:
                     self.run_lines('engine_failure', Scenario.engine['side']['failed'])
         else:
             if Scenario.role['duties'] == 'PM':
                 self.run_lines('engine_failure', Scenario.engine['side']['failed'], skip_first=True)
+
             else:
                 self.actions()
                 self.run_lines('engine_failure', Scenario.engine['side']['failed'])
+
         return 'after takeoff checks'
 
 
@@ -267,7 +296,7 @@ class Runner:
             print(e)
             print('Invalid input, re-starting')
 
-Scenario.systems['autocoarsen'] = False
+
 scenario_map = SOP('EngineFailure')
 sop = Runner(scenario_map)
 os.system('cls')
