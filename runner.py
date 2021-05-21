@@ -3,6 +3,8 @@ import re
 import random
 from sys import exit
 
+scripts_path = 'C:/Users/adrav/projects/pasco/'
+
 class Scenario:
     role = {
         "seat": 'FO',
@@ -39,7 +41,7 @@ class Scenario:
 
     def get_script(self,search_pattern):
         search_pattern = search_pattern.replace(' ', '_')
-        return 'scripts/' + re.sub(r'\d/.*', "", str(self.search(Scenario.script, search_pattern)[0])) + search_pattern + '.txt'
+        return scripts_path + 'scripts/' + re.sub(r'\d/.*', "", str(self.search(Scenario.script, search_pattern)[0])) + search_pattern + '.txt'
 
     def run_lines(self, script, *args, skip_first=False):
         with open(self.get_script(script), "r") as calls:
@@ -202,10 +204,15 @@ class EngineFailure(Scenario):
                 Scenario.engine['side']['failed'] = 'right'
 
         if Scenario.engine['autocoarsen']:
-            return self.run_lines('posAutocoarsen', Scenario.engine['side']['failed'], skip_first=True)
-
+            if Scenario.role['duties'] == 'PF':
+                return self.run_lines('posAutocoarsen', Scenario.engine['side']['failed'])
+            else:
+                return self.run_lines('posAutocoarsen', Scenario.engine['side']['failed'], skip_first=True)
         else:
-            return self.run_lines('negAutocoarsen', Scenario.engine['side']['failed'], skip_first=True)
+            if Scenario.role['duties'] == 'PF':
+                return self.run_lines('negAutocoarsen', Scenario.engine['side']['failed'])
+            else:
+                return self.run_lines('negAutocoarsen', Scenario.engine['side']['failed'], skip_first=True)
 
     def above_1500(self):
         self.run_lines('above_1500')
@@ -296,7 +303,7 @@ class VitalActions(Scenario):
 class SOP:
 
     scenarios = {
-        'Briefing':Briefing(),
+        'Briefing' : Briefing(),
         'EngineFailure' : EngineFailure(),
         'vital_actions': VitalActions(),
         'takeoff': TakeOff()
@@ -333,7 +340,8 @@ class Runner:
             print('Invalid input, re-starting')
 
 
-scenario_map = SOP('Briefing')
+scenario_map = SOP('EngineFailure')
 sop = Runner(scenario_map)
 os.system('cls')
+print('You are the ' + Scenario.role['duties'] + ". \n This an engine failure scenario.")
 sop.begin()
