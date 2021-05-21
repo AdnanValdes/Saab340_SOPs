@@ -1,9 +1,21 @@
+#!/usr/bin/python3
 import os
 import re
 import random
+import numpy as np
+from platform import system
 from sys import exit
 
-scripts_path = 'C:/Users/adrav/projects/pasco/'
+from utils import check_and_print, settings
+
+plt = system()
+
+if plt == 'Windows':
+    scripts_path = 'C:/Users/adrav/projects/pasco/'
+    os.system('cls')
+else:
+    scripts_path = '/home/ubuntu/sops/'
+    os.system('clear')
 
 class Scenario:
     role = {
@@ -30,6 +42,8 @@ class Scenario:
               'vitalActions': ['confirm_levers', 'engine_failure', 'engine_fire', 'engine_failure_fire', 'continued_fire']
     }
 
+    settings = {'pedantic':False}
+
     def actions(self):
         action = input('> ').lower()
 
@@ -52,7 +66,10 @@ class Scenario:
 
             while line:
                 if line[:2] == Scenario.role['duties'] or line[:2] == Scenario.role['seat']:
-                    usr_input = self.actions()
+                    if Scenario.settings['pedantic']:
+                        usr_input = check_and_print(self.actions(), line[3:].strip(), pedantic = True)
+                    else:
+                        usr_input = self.actions()
 
                     if 'autopilot' in usr_input and Scenario.role['duties'] == 'PF':
                         print('PM: engaged.')
@@ -342,6 +359,6 @@ class Runner:
 
 scenario_map = SOP('EngineFailure')
 sop = Runner(scenario_map)
-os.system('cls')
-print('You are the ' + Scenario.role['duties'] + ". \n This an engine failure scenario.")
+print('You are the ' + Scenario.role['duties'] + ". \nThis an engine failure scenario.")
+Scenario.settings['pedantic'] = settings()
 sop.begin()
