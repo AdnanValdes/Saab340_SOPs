@@ -42,7 +42,7 @@ class Scenario:
               'vitalActions': ['confirm_levers', 'engine_failure', 'engine_fire', 'engine_failure_fire', 'continued_fire']
     }
 
-    settings = {'pedantic':False}
+    settings = {'pedantic_level':False}
 
     def actions(self):
         action = input('> ').lower()
@@ -66,10 +66,10 @@ class Scenario:
 
             while line:
                 if line[:2] == Scenario.role['duties'] or line[:2] == Scenario.role['seat']:
-                    if Scenario.settings['pedantic']:
-                        usr_input = check_and_print(self.actions(), line[3:].strip(), pedantic = True)
-                    else:
-                        usr_input = self.actions()
+                    try:
+                        usr_input = check_and_print(self.actions(), line[3:].strip().lower(), ratio = Scenario.settings['pedantic_level'])
+                    except UnboundLocalError or TypeError:
+                        usr_input = input('Something went wrong. Enter your call again:\n>')
 
                     if 'autopilot' in usr_input and Scenario.role['duties'] == 'PF':
                         print('PM: engaged.')
@@ -201,6 +201,7 @@ class EngineFailure(Scenario):
             return self.above_1500()
 
     def after_v1(self):
+        print(f"\n\nYou just passed V1 on a takeoff roll and an engine failed. \nYou are the {Scenario.role['duties']}.\n")
         # Only runs beginning of engine failure SOP, up to "confirm autocoarsen".
         # The first choice the user makes is *after* this script ends.
         self.run_lines('check_power')
@@ -359,6 +360,7 @@ class Runner:
 
 scenario_map = SOP('EngineFailure')
 sop = Runner(scenario_map)
-print('You are the ' + Scenario.role['duties'] + ". \nThis an engine failure scenario.")
-Scenario.settings['pedantic'] = settings()
+print('This material should NOT be used for training. At best, it should be used to amuse yourself during a coffee break, although frankly \nit should probably not be used by anyone. The lines and code here were written to help *me* study, and I cannot guarantee that anything is correct.\nYou will be better off assuming everything is wrong.\n ===================================================================================================\n')
+Scenario.settings['pedantic_level'] = settings()
+print(f"{Scenario.engine['side']['failed']} engine failure")
 sop.begin()

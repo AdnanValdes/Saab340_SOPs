@@ -1,4 +1,6 @@
 import numpy as np
+from textwrap import dedent
+
 def levenshtein(s, t, ratio_calc = True):
     """ levenshtein_ratio_and_distance:
         Calculates levenshtein distance between two strings.
@@ -44,7 +46,7 @@ def levenshtein(s, t, ratio_calc = True):
         # This is the minimum number of edits needed to convert string a to string b
         return "Your call is off by {} characters".format(distance[row][col])
 
-def check_and_print(usr_input, sop, ratio=0.50, pedantic=False):
+def check_and_print(usr_input, sop, ratio=0.50, pedantic=True):
     if pedantic:
         while levenshtein(usr_input, sop) < ratio:
             if 'fuck' in usr_input:
@@ -56,8 +58,25 @@ def check_and_print(usr_input, sop, ratio=0.50, pedantic=False):
     return usr_input
 
 def settings():
-    action = input('Enable pedantic mode? [y/n] \nIn pedantic mode, a spell checker will be enabled to ensure you write your calls \nexactly as they are written in the SOP manual.\n>')
-    if 'y' in action or 'yes' in action:
-        return True
-    else:
-        return False
+    action = input('''Choose pedantic level.\n
+This setting affects how well the program understands your inputs - to put it another way, it's a fancy spellchecker. \nFor example, in level 0 it doesn't matter what you write: the program will accept the input as correct. \nIn "Zurbuchen" mode, "flap 0" and "flaps 0" are two completely separate calls and the \nwrong one will not be accepted. In other words, you will have to type *exactly* what is written in the SOP manual.
+
+The higher the pedantic level, the more pedantic the program will be. I don't recommend Level 3: you'll be incredibly frustrated because you will miss a period or something.
+
+Choose pedantic level [enter number]:\n
+0) level 0.
+1) level 1.
+2) level 2.
+3) Zurbuchen.\n>''').lower()
+
+    while action not in [0, 1, 2, 3, 'zurbuchen']:
+        if action == '0':
+            return 0
+        elif action == '1':
+            return 0.50
+        elif action =='2':
+            return 0.80
+        elif action == '3':
+            return 1
+        else:
+            action = input('Choose a valid number.\n>')
