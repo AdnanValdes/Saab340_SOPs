@@ -8,9 +8,7 @@ from sys import exit
 
 from utils import check_and_print, settings
 
-plt = system()
-
-if plt == 'Windows':
+if system() == 'Windows':
     scripts_path = 'C:/Users/adrav/projects/pasco/'
     os.system('cls')
 else:
@@ -67,7 +65,7 @@ class Scenario:
             while line:
                 if line[:2] == Scenario.role['duties'] or line[:2] == Scenario.role['seat']:
                     try:
-                        usr_input = check_and_print(self.actions(), line[3:].strip().lower(), ratio = Scenario.settings['pedantic_level'])
+                        usr_input = check_and_print(self.actions(), line[3:].strip().lower().format(*args), ratio = Scenario.settings['pedantic_level'])
                     except UnboundLocalError or TypeError:
                         usr_input = input('Something went wrong. Enter your call again:\n>')
 
@@ -336,6 +334,9 @@ class SOP:
     def opening_scenario(self):
         return self.next_scenario(self.start_scenario)
 
+    def scenario_options(self):
+        print(self.scenarios)
+
 
 class Runner:
 
@@ -358,9 +359,9 @@ class Runner:
             print('Invalid input, re-starting')
 
 
+Scenario.settings['pedantic_level'] = settings()
+SOP.scenario_options()
 scenario_map = SOP('EngineFailure')
 sop = Runner(scenario_map)
 print('This material should NOT be used for training. At best, it should be used to amuse yourself during a coffee break, although frankly \nit should probably not be used by anyone. The lines and code here were written to help *me* study, and I cannot guarantee that anything is correct.\nYou will be better off assuming everything is wrong.\n ===================================================================================================\n')
-Scenario.settings['pedantic_level'] = settings()
-print(f"{Scenario.engine['side']['failed']} engine failure")
 sop.begin()
