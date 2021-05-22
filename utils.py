@@ -1,5 +1,5 @@
 import numpy as np
-from textwrap import dedent
+import random
 
 def levenshtein(s, t, ratio_calc = True):
     """ levenshtein_ratio_and_distance:
@@ -48,12 +48,12 @@ def levenshtein(s, t, ratio_calc = True):
 
 def check_and_print(usr_input, sop, ratio=0.50, pedantic=True):
     if pedantic:
-        while levenshtein(usr_input, sop) < ratio:
+        while levenshtein(usr_input, sop) < ratio and usr_input != 'settings':
             if 'fuck' in usr_input:
                 print("Sir, this is a Wendy's.")
             else:
                 print('Wrong call!')
-            usr_input = input('> ')
+            usr_input = input('> ').lower()
         return usr_input
     return usr_input
 
@@ -68,15 +68,40 @@ Choose pedantic level [enter number]:\n
 1) level 1.
 2) level 2.
 3) Zurbuchen.\n>''').lower()
-
+    settings = {'seat':'FO',
+                'duties':random.choice(['PF', 'PM']),
+                'pedantic_level':False,
+                'flight_no': random.randint(100, 10000),
+                'current_scenario' : None
+                }
     while action not in [0, 1, 2, 3, 'zurbuchen']:
         if action == '0':
-            return 0
+            settings['pedantic_level'] = 0
+            break
         elif action == '1':
-            return 0.50
+            settings['pedantic_level'] = 0.50
+            break
         elif action =='2':
-            return 0.80
+            settings['pedantic_level'] = 0.80
+            break
         elif action == '3':
-            return 1
+            settings['pedantic_level'] = 1
+            break
         else:
             action = input('Choose a valid number.\n>')
+
+    action = input('''Choose your role [enter number]:\n
+0) Captain
+1) First Officer\n''')
+
+    while action not in [0,1]:
+        if action == '0':
+            settings['seat'] = 'CA'
+            break
+        elif action == '1':
+            settings['seat'] == 'FO'
+            break
+        else:
+            action = input('Choose a valid number.\n>')
+
+    return settings

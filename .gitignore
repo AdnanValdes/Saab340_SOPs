@@ -142,6 +142,7 @@ cython_debug/
 scripts/
 test.py
 scratchpad.py
+scratch.py
 
 #Webserver
 webserver/

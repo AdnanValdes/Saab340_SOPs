@@ -16,6 +16,9 @@ else:
     os.system('clear')
 
 class Scenario:
+
+    scenario_name = 'scenario'
+
     role = {
         "seat": 'FO',
         "duties": random.choice(['PF', 'PM'])
@@ -40,10 +43,12 @@ class Scenario:
               'vitalActions': ['confirm_levers', 'engine_failure', 'engine_fire', 'engine_failure_fire', 'continued_fire']
     }
 
-    settings = {'pedantic_level':False}
+    settings = {}
 
     def actions(self):
         action = input('> ').lower()
+        #while not action:
+        #    action = input('Something went wrong or you left the input blank, enter your call again.')
 
         if action == 'quit':
             return self.quit_game()
@@ -66,6 +71,9 @@ class Scenario:
                 if line[:2] == Scenario.role['duties'] or line[:2] == Scenario.role['seat']:
                     try:
                         usr_input = check_and_print(self.actions(), line[3:].strip().lower().format(*args), ratio = Scenario.settings['pedantic_level'])
+                        while usr_input == 'settings':
+                            Scenario.settings = settings()
+                            usr_input = check_and_print(self.actions(), line[3:].strip().lower().format(*args), ratio = Scenario.settings['pedantic_level'])
                     except UnboundLocalError or TypeError:
                         usr_input = input('Something went wrong. Enter your call again:\n>')
 
@@ -103,7 +111,8 @@ class Scenario:
             return self.actions()
 
     def start(self):
-        pass
+        Scenario.settings['current_scenario'] = self.scenario_name
+
 
     def search(self, d, search_pattern, prev_datapoint_path=''):
         '''
@@ -144,7 +153,9 @@ class Briefing(Scenario):
     scenario_name = 'briefing'
 
     def start(self):
-        self.emergency()
+        super().start()
+        print(f"Emergency briefing. You are the {Scenario.role['duties']}\n")
+        return self.emergency()
 
     def emergency(self):
         self.run_lines('any_malfunction')
@@ -173,21 +184,27 @@ class Briefing(Scenario):
         else:
             print('PF: engine fire status.')
         self.run_lines('engine_failure', Scenario.engine['side']['failed'])
+        return 'takeoff'
 
 class TakeOff(Scenario):
 
     scenario_name = 'takeoff'
 
     def start(self):
-        print('take off scenario!')
+        super().start()
+        print(f"Takeoff scenario.\nPasco {Scenario.settings['flight_no']}, you are cleared for takeoff... \n(You do not need to answer ATC calls here).")
         return 'vital_actions'
 
 
+class Checklist(Scenario):
+    pass
+
 class EngineFailure(Scenario):
 
-    scenario_name = 'EngineFailure'
+    scenario_name = 'engine_failure'
 
     def start(self):
+        super().start()
 
         if Scenario.systems['autocoarsen']:
             return self.after_v1()
@@ -264,6 +281,7 @@ class VitalActions(Scenario):
     scenario_name = 'vital_actions'
 
     def start(self):
+        super().start()
         # Add logic for calling vital actions without specifying which ones (AKA when Scenario.vital['actions'] = None)
         if 'engine failure' in Scenario.vital['actions']:
             return self.engine_vital_actions()
@@ -319,8 +337,8 @@ class VitalActions(Scenario):
 class SOP:
 
     scenarios = {
-        'Briefing' : Briefing(),
-        'EngineFailure' : EngineFailure(),
+        'briefing' : Briefing(),
+        'engine_failure' : EngineFailure(),
         'vital_actions': VitalActions(),
         'takeoff': TakeOff()
     }
@@ -354,14 +372,13 @@ class Runner:
         try:
             current_scenario.start()
         except Exception as e:
-            return 'EngineFailure'
+            return 'engine_failure'
             print(e)
             print('Invalid input, re-starting')
 
 
-Scenario.settings['pedantic_level'] = settings()
-SOP.scenario_options()
-scenario_map = SOP('EngineFailure')
+scenario_map = SOP('briefing')
 sop = Runner(scenario_map)
 print('This material should NOT be used for training. At best, it should be used to amuse yourself during a coffee break, although frankly \nit should probably not be used by anyone. The lines and code here were written to help *me* study, and I cannot guarantee that anything is correct.\nYou will be better off assuming everything is wrong.\n ===================================================================================================\n')
+Scenario.settings = settings()
 sop.begin()
